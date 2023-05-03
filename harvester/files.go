@@ -45,3 +45,32 @@ func GenerateYAMLTempFileWithPerm(obj interface{}, prefix string, perm fs.FileMo
 
 	return tempFile.Name(), nil
 }
+
+// Generate Temp file with buffer, return the file name
+func GenerateTempFile(buf []byte, prefix string) (string, error) {
+	return GenerateYAMLTempFileWithPerm(buf, prefix, defaultFilePerm)
+}
+
+// Generate Temp file with buffer and permission, return the file name
+func GenerateTempFileWithPerm(buf []byte, prefix string, perm fs.FileMode) (string, error) {
+	tempFile, err := os.CreateTemp("/tmp", prefix)
+	if err != nil {
+		logrus.Errorf("Create temp file failed. err: %v", err)
+		return "", err
+	}
+	defer tempFile.Close()
+
+	if err = tempFile.Chmod(perm); err != nil {
+		logrus.Errorf("Chmod temp file failed. err: %v", err)
+		return "", err
+	}
+
+	if _, err := tempFile.Write(buf); err != nil {
+		logrus.Errorf("Write YAML content to file failed. err: %v", err)
+		return "", err
+	}
+
+	logrus.Debugf("Content of %s: %s", tempFile.Name(), string(buf))
+
+	return tempFile.Name(), nil
+}
