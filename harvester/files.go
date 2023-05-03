@@ -13,16 +13,25 @@ import (
 
 const (
 	defaultFilePerm = 0644
+	defaultTempDir  = "/tmp"
 )
 
 // Generate Temp file with YAML content, return the file name
 func GenerateYAMLTempFile(obj interface{}, prefix string) (string, error) {
-	return GenerateYAMLTempFileWithPerm(obj, prefix, defaultFilePerm)
+	return GenerateYAMLTempFileFullOptions(obj, prefix, defaultTempDir, defaultFilePerm)
+}
+
+func GenerateYAMLTempFileWithPerm(obj interface{}, prefix string, perm fs.FileMode) (string, error) {
+	return GenerateYAMLTempFileFullOptions(obj, prefix, defaultTempDir, perm)
+}
+
+func GenerateYAMLTempFileWithDir(obj interface{}, prefix, dirPath string) (string, error) {
+	return GenerateYAMLTempFileFullOptions(obj, prefix, dirPath, defaultFilePerm)
 }
 
 // Generate Temp file with YAML content and permission, return the file name
-func GenerateYAMLTempFileWithPerm(obj interface{}, prefix string, perm fs.FileMode) (string, error) {
-	tempFile, err := os.CreateTemp("/tmp", prefix)
+func GenerateYAMLTempFileFullOptions(obj interface{}, prefix, dirPath string, perm fs.FileMode) (string, error) {
+	tempFile, err := os.CreateTemp(dirPath, prefix)
 	if err != nil {
 		logrus.Errorf("Create temp file failed. err: %v", err)
 		return "", err
@@ -51,12 +60,22 @@ func GenerateYAMLTempFileWithPerm(obj interface{}, prefix string, perm fs.FileMo
 
 // Generate Temp file with buffer, return the file name
 func GenerateTempFile(buf []byte, prefix string) (string, error) {
-	return GenerateYAMLTempFileWithPerm(buf, prefix, defaultFilePerm)
+	return GenerateTempFileFullOptions(buf, prefix, defaultTempDir, defaultFilePerm)
 }
 
 // Generate Temp file with buffer and permission, return the file name
 func GenerateTempFileWithPerm(buf []byte, prefix string, perm fs.FileMode) (string, error) {
-	tempFile, err := os.CreateTemp("/tmp", prefix)
+	return GenerateTempFileFullOptions(buf, prefix, defaultTempDir, perm)
+}
+
+// Generate Temp file with buffer and directory, return the fullpath
+func GenerateTempFileWithDir(buf []byte, prefix, dirPath string) (string, error) {
+	return GenerateTempFileFullOptions(buf, prefix, dirPath, defaultFilePerm)
+}
+
+// Generate Temp file with buffer, directory and permission, return the file name
+func GenerateTempFileFullOptions(buf []byte, prefix, dirPath string, perm fs.FileMode) (string, error) {
+	tempFile, err := os.CreateTemp(dirPath, prefix)
 	if err != nil {
 		logrus.Errorf("Create temp file failed. err: %v", err)
 		return "", err
