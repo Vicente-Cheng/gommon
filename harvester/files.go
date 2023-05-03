@@ -1,8 +1,11 @@
 package harvester
 
 import (
+	"fmt"
+	"io"
 	"io/fs"
 	"os"
+	"strings"
 
 	"github.com/sirupsen/logrus"
 	"gopkg.in/yaml.v2"
@@ -66,11 +69,63 @@ func GenerateTempFileWithPerm(buf []byte, prefix string, perm fs.FileMode) (stri
 	}
 
 	if _, err := tempFile.Write(buf); err != nil {
-		logrus.Errorf("Write YAML content to file failed. err: %v", err)
+		logrus.Errorf("Write buf to file failed. err: %v", err)
 		return "", err
 	}
 
 	logrus.Debugf("Content of %s: %s", tempFile.Name(), string(buf))
 
 	return tempFile.Name(), nil
+}
+
+func BackupFile(source string) (string, error) {
+	return BackupFileToDir(source, "")
+}
+
+func BackupFileToDir(sourcePath, dstDir string) (string, error) {
+
+	srcStat, err := os.Stat(sourcePath)
+	if err != nil {
+		logrus.Errorf("Stat file failed. err: %v", err)
+		return "", err
+	}
+
+	if !srcStat.Mode().IsRegular() {
+		return "", fmt.Errorf("%s is not a regular file", sourcePath)
+	}
+
+	src, err := os.Open(sourcePath)
+	if err != nil {
+		logrus.Errorf("Open file failed. err: %v", err)
+		return "", err
+	}
+	defer src.Close()
+
+	// if disDir is nil, keep the backup file in the same directory
+	dstPath := ""
+	if dstDir == "" {
+		dstPath = fmt.Sprintf("%s.bak", sourcePath)
+	} else {
+		sourceFileName := GetFileName(sourcePath)
+		dstPath = fmt.Sprintf("%s/%s.bak", dstDir, sourceFileName)
+	}
+
+	dst, err := os.Create(dstPath)
+	if err != nil {
+		logrus.Errorf("Create NTP config backup file failed. err: %v", err)
+		return "", err
+	}
+	defer dst.Close()
+
+	_, err = io.Copy(dst, src)
+	if err != nil {
+		logrus.Errorf("Copy file failed. err: %v", err)
+		return "", err
+	}
+	return dstPath, nil
+
+}
+
+func GetFileName(path string) string {
+	return path[strings.LastIndex(path, "/")+1:]
 }
