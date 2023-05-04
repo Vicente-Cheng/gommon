@@ -145,6 +145,16 @@ func BackupFileToDir(sourcePath, dstDir string) (string, error) {
 
 }
 
+func RemoveFiles(path ...string) error {
+	for _, target := range path {
+		if err := os.Remove(target); err != nil {
+			logrus.Errorf("Remove file %s failed. err: %v", target, err)
+			return err
+		}
+	}
+	return nil
+}
+
 func GetFileName(path string) string {
 	return path[strings.LastIndex(path, "/")+1:]
 }
