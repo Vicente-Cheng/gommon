@@ -2,7 +2,9 @@ package harvester
 
 import (
 	"context"
+	"os"
 
+	"github.com/fsnotify/fsnotify"
 	"github.com/godbus/dbus/v5"
 	"github.com/sirupsen/logrus"
 )
@@ -43,4 +45,38 @@ func generateDBUSConnection() (*dbus.Conn, error) {
 	}
 
 	return conn, nil
+}
+
+func WatchFileChange(ctx context.Context, handlerFunc func(eventType string), monitorTargets []string) {
+	watcher, err := fsnotify.NewWatcher()
+	if err != nil {
+		logrus.Errorf("failed to creating a fsnotify watcher: %v", err)
+		return
+	}
+	defer watcher.Close()
+
+	for _, target := range monitorTargets {
+		_, err = os.Stat(target)
+		if err != nil {
+			logrus.Errorf("failed to stat file %s: %v", target, err)
+			continue
+		}
+		err := watcher.Add(target)
+		if err != nil {
+			logrus.Errorf("failed to add file %s to watcher: %v", target, err)
+			continue
+		}
+	}
+
+	for {
+		select {
+		case event := <-watcher.Events:
+			logrus.Debugf("event: %+v", event)
+			if event.Op == fsnotify.Write {
+				handlerFunc(event.Name)
+			}
+		case <-ctx.Done():
+			return
+		}
+	}
 }
